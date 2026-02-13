@@ -52,10 +52,10 @@ export class FireCrawlScraper implements ContentScraper {
       const startTime = Date.now();
       const currentDate = new Date().toLocaleDateString();
 
-      // 构建提取提示词
+      // 构建提取提示词（放宽时间范围：最近 3 天）
       const promptForFirecrawl = `
-      Return only today's AI or LLM related story or post headlines and links in JSON format from the page content. 
-      They must be posted today, ${currentDate}. The format should be:
+      Return AI or LLM related story or post headlines and links in JSON format from the page content. 
+      They must be posted in the last 3 days (including today, ${currentDate}). The format should be:
         {
           "stories": [
             {
@@ -67,7 +67,7 @@ export class FireCrawlScraper implements ContentScraper {
             ...
           ]
         }
-      If there are no AI or LLM stories from today, return {"stories": []}.
+      If there are no AI or LLM stories from the last 3 days, return {"stories": []}.
       
       The source link is ${sourceId}. 
       If a story link is not absolute, prepend ${sourceId} to make it absolute. 

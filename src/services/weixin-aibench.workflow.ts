@@ -16,6 +16,7 @@ import {
 import { WorkflowTerminateError } from "@src/works/workflow-error.ts";
 import { Logger } from "@zilla/logger";
 import { ImageGeneratorType } from "@src/providers/interfaces/image-gen.interface.ts";
+import { ArticleLogService } from "@src/services/article-log.service.ts";
 
 const logger = new Logger("weixin-aibench-workflow");
 
@@ -130,9 +131,17 @@ export class WeixinAIBenchWorkflow extends WorkflowEntrypoint<
           timeout: "5 minutes",
         },
         async () => {
-          const title = `${topModelName}领跑！${
+          let title = `${topModelName}领跑！${
             new Date().toLocaleDateString()
           } AI模型性能榜单`;
+          // 微信公众号标题限制：最多64个字符
+          const MAX_TITLE_LENGTH = 64;
+          if (title.length > MAX_TITLE_LENGTH) {
+            logger.warn(
+              `标题长度超过限制(${title.length} > ${MAX_TITLE_LENGTH})，已自动截断。原文: ${title}`,
+            );
+            title = title.slice(0, MAX_TITLE_LENGTH);
+          }
           const imageTitle = `本周大模型排行 ${topModelOrg}旗下大模型登顶`;
           const html = await this.renderer.render(templateData);
 
@@ -162,6 +171,18 @@ export class WeixinAIBenchWorkflow extends WorkflowEntrypoint<
           mediaId,
         );
       });
+
+      // 记录发布日志
+      if (publishResult && publishResult.url) {
+        await ArticleLogService.logPublishedArticle({
+          title,
+          summary: "AI 模型性能榜单周报",
+          workflowType: "weixin-aibench-workflow",
+          platform: publishResult.platform,
+          url: publishResult.url,
+          publishedAt: publishResult.publishedAt,
+        });
+      }
 
       // 7. 完成报告
       logger.info("[工作流] 工作流执行完成");

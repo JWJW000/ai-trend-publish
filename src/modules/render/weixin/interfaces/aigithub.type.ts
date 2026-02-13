@@ -23,4 +23,5 @@ export interface AIGithubItemDetail extends AIGithubItem {
   tags: string[];
   license: string;
   relatedUrls: relatedUrl[];
+  imageUrl?: string;
 }

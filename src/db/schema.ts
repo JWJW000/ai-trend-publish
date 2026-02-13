@@ -72,3 +72,16 @@ export const vectorItems = mysqlTable("vector_items", {
 (table) => [
 	primaryKey({ columns: [table.id], name: "vector_items_id"}),
 ]);
+
+export const publishedArticles = mysqlTable("published_articles", {
+	id: int().autoincrement().notNull(),
+	title: varchar({ length: 255 }).notNull(),
+	summary: text(),
+	workflowType: varchar("workflow_type", { length: 100 }),
+	publishedAt: timestamp("published_at", { mode: 'string' }).defaultNow().notNull(),
+	platform: varchar({ length: 50 }).notNull(),
+	url: text().notNull(),
+},
+(table) => [
+	primaryKey({ columns: [table.id], name: "published_articles_id"}),
+]);

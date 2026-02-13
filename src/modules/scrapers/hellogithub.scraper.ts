@@ -84,6 +84,12 @@ export class HelloGithubScraper {
       const starHistory = repoData.star_history;
       const lastWeekStars = starHistory ? starHistory.increment || 0 : 0;
 
+      // 尝试提取项目封面图（如果有）
+      const imageUrl = repoData.cover ||
+        repoData.cover_url ||
+        repoData.image ||
+        null;
+
       return {
         itemId,
         author: repoData.author,
@@ -100,6 +106,7 @@ export class HelloGithubScraper {
         tags,
         license: repoData.license,
         relatedUrls,
+        imageUrl: imageUrl || undefined,
       };
     } catch (error: unknown) {
       if (error instanceof Error) {

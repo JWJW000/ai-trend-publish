@@ -16,6 +16,7 @@ import { ImageGeneratorType } from "@src/providers/interfaces/image-gen.interfac
 import { LLMFactory } from "@src/providers/llm/llm-factory.ts";
 import { ConfigManager } from "@src/utils/config/config-manager.ts";
 import { runConcurrentTasks } from "@src/utils/concurrency/concurrency-limiter.ts";
+import { ArticleLogService } from "@src/services/article-log.service.ts";
 const logger = new Logger("weixin-hellogithub-workflow");
 
 interface WeixinHelloGithubWorkflowEnv {
@@ -87,7 +88,7 @@ export class WeixinHelloGithubWorkflow extends WorkflowEntrypoint<
         timeout: "10 minutes",
       }, async () => {
         logger.info("[数据获取] 开始获取项目详情");
-        const maxItems = event.payload.maxItems || 20;
+        const maxItems = event.payload.maxItems || 5; // 默认每期推荐 5 个项目
         const details = await Promise.all(
           hotItems.slice(0, maxItems).map(async (item) => {
             logger.debug(`[项目详情] 获取项目: ${item.title}`);
@@ -183,11 +184,19 @@ export class WeixinHelloGithubWorkflow extends WorkflowEntrypoint<
       const { title, htmlContent } = await step.do("generate-content", {
         retries: { limit: 2, delay: "5 second", backoff: "exponential" },
         timeout: "5 minutes",
-      }, async () => {
+      },       async () => {
         logger.info("[内容生成] 开始渲染内容");
         const firstItem = items[0];
-        const title =
+        let title =
           `本期精选 GitHub 热门 AI 开源项目，第一名 ${firstItem.name} 项目备受瞩目，发现最新最酷的人工智能开源工具`;
+        // 微信公众号标题限制：最多64个字符
+        const MAX_TITLE_LENGTH = 64;
+        if (title.length > MAX_TITLE_LENGTH) {
+          logger.warn(
+            `标题长度超过限制(${title.length} > ${MAX_TITLE_LENGTH})，已自动截断。原文: ${title}`,
+          );
+          title = title.slice(0, MAX_TITLE_LENGTH);
+        }
         const html = await this.renderer.render(items);
         return { title, htmlContent: html };
       });
@@ -205,6 +214,18 @@ export class WeixinHelloGithubWorkflow extends WorkflowEntrypoint<
           mediaId,
         );
       });
+
+      // 记录发布日志
+      if (publishResult && publishResult.url) {
+        await ArticleLogService.logPublishedArticle({
+          title,
+          summary: "HelloGitHub 热门 AI 开源项目精选",
+          workflowType: "weixin-hellogithub-workflow",
+          platform: publishResult.platform,
+          url: publishResult.url,
+          publishedAt: publishResult.publishedAt,
+        });
+      }
 
       // 6. 完成报告
       logger.info("[工作流] 工作流执行完成");

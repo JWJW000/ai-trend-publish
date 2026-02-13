@@ -11,7 +11,8 @@ export class WeixinArticleTemplateRenderer
   extends BaseTemplateRenderer<WeixinTemplate[]> {
   constructor() {
     super("article");
-    this.availableTemplates = ["default", "modern", "tech", "mianpro"];
+    // 将 modern 作为默认模板，使文章整体更美观
+    this.availableTemplates = ["modern", "default", "tech", "mianpro"];
   }
 
   /**

@@ -12,13 +12,17 @@ interface SourceItem {
 
 type SourceConfig = Record<NewsPlatform, SourceItem[]>;
 
-// 本地源配置
+// 本地源配置：可以在这里预置一些常用的数据源
 export const sourceConfigs: SourceConfig = {
   firecrawl: [
     { identifier: "https://news.ycombinator.com/" },
   ],
   twitter: [
-    { identifier: "https://x.com/OpenAIDevs" },
+    // 你可以根据需要继续在这里添加更多账号
+    { identifier: "https://x.com/OpenAIDevs" },       // OpenAI Devs
+    { identifier: "https://x.com/DeepSeek_AI" },      // DeepSeek
+    { identifier: "https://x.com/GoogleDeepMind" },   // Google DeepMind
+    { identifier: "https://x.com/AnthropicAI" },      // Anthropic
   ],
 } as const;
 

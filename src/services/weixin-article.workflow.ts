@@ -30,6 +30,7 @@ import { EmbeddingProvider } from "@src/providers/interfaces/embedding.interface
 import { EmbeddingFactory } from "@src/providers/embedding/embedding-factory.ts";
 import { EmbeddingProviderType } from "@src/providers/interfaces/embedding.interface.ts";
 import { VectorSimilarityUtil } from "@src/utils/VectorSimilarityUtil.ts";
+import { ArticleLogService } from "@src/services/article-log.service.ts";
 const logger = new Logger("weixin-article-workflow");
 
 interface WeixinWorkflowEnv {
@@ -397,7 +398,15 @@ export class WeixinArticleWorkflow
             processedContents.map((c) => c.title).join(" | "),
           ).then((t) => {
             t = `${new Date().toLocaleDateString()} AI速递 | ${t}`;
-            return t.slice(0, 64);
+            // 微信公众号标题限制：最多64个字符
+            const MAX_TITLE_LENGTH = 64;
+            if (t.length > MAX_TITLE_LENGTH) {
+              logger.warn(
+                `标题长度超过限制(${t.length} > ${MAX_TITLE_LENGTH})，已自动截断。原文: ${t}`,
+              );
+              t = t.slice(0, MAX_TITLE_LENGTH);
+            }
+            return t;
           });
 
           // 生成封面图片
@@ -406,7 +415,7 @@ export class WeixinArticleWorkflow
           const imageUrl = await imageGenerator.generate({
             title: title.split(" | ")[1].trim().slice(0, 30),
             sub_title: new Date().toLocaleDateString() + " AI速递",
-            prompt_text_zh: `科技前沿资讯 | 人工智能新闻 | 每日AI快报 - ${
+            prompt_text_zh: `AI 行业日报 · 重磅资讯精选 - ${
               title.split(" | ")[1].trim().slice(0, 30)
             }`,
             generate_mode: "generate",
@@ -428,7 +437,7 @@ export class WeixinArticleWorkflow
       );
 
       // 8. 发布文章
-      await step.do("publish-article", {
+      const publishResult = await step.do("publish-article", {
         retries: { limit: 3, delay: "10 second", backoff: "exponential" },
         timeout: "5 minutes",
       }, async () => {
@@ -440,6 +449,18 @@ export class WeixinArticleWorkflow
           mediaId,
         );
       });
+
+      // 记录发布日志
+      if (publishResult && publishResult.url) {
+        await ArticleLogService.logPublishedArticle({
+          title: summaryTitle,
+          summary: `AI 速递聚合文章，包含 ${processedContents.length} 条内容`,
+          workflowType: "weixin-article-workflow",
+          platform: publishResult.platform,
+          url: publishResult.url,
+          publishedAt: publishResult.publishedAt,
+        });
+      }
 
       // 9. 完成报告
       const summary = `

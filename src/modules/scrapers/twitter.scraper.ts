@@ -40,7 +40,8 @@ export class TwitterScraper implements ContentScraper {
     logger.debug(`Processing Twitter user: ${username}`);
 
     try {
-      const query = `from:${username} -filter:replies within_time:24h`;
+      // 放宽时间范围：最近 7 天的推文，仍然排除回复
+      const query = `from:${username} -filter:replies within_time:7d`;
       const apiUrl =
         `https://api.twitterapi.io/twitter/tweet/advanced_search?query=${
           encodeURIComponent(
@@ -61,7 +62,7 @@ export class TwitterScraper implements ContentScraper {
 
       const tweets = await response.json();
       const scrapedContent: ScrapedContent[] = tweets.tweets
-        .slice(0, 20)
+        .slice(0, 50)
         .map((tweet: any) => {
           const quotedContent = this.getQuotedContent(tweet.quoted_tweet);
           let media = this.getMediaList(tweet.extendedEntities);

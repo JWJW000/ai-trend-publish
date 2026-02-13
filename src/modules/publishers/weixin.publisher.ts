@@ -81,9 +81,19 @@ export class WeixinPublisher implements ContentPublisher {
     const url =
       `https://api.weixin.qq.com/cgi-bin/draft/add?access_token=${token}`;
 
+    // 微信公众号标题限制：最多64个字符（UTF-8编码，中文算1个字符）
+    const MAX_TITLE_LENGTH = 64;
+    let finalTitle = title;
+    if (finalTitle.length > MAX_TITLE_LENGTH) {
+      logger.warn(
+        `标题长度超过限制(${finalTitle.length} > ${MAX_TITLE_LENGTH})，已自动截断。原文: ${finalTitle}`,
+      );
+      finalTitle = finalTitle.slice(0, MAX_TITLE_LENGTH);
+    }
+
     const articles = [
       {
-        title: title,
+        title: finalTitle,
         author: await ConfigManager.getInstance().get("AUTHOR"),
         digest: digest,
         content: article,

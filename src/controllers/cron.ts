@@ -1,16 +1,13 @@
 import cron from "npm:node-cron";
 import { WeixinArticleWorkflow } from "@src/services/weixin-article.workflow.ts";
-import { WeixinAIBenchWorkflow } from "@src/services/weixin-aibench.workflow.ts";
-import { WeixinHelloGithubWorkflow } from "@src/services/weixin-hellogithub.workflow.ts";
 import { BarkNotifier } from "@src/modules/notify/bark.notify.ts";
 import { WorkflowEntrypoint } from "@src/works/workflow.ts";
 import { WorkflowConfigService } from "@src/services/workflow-config.service.ts";
 import { Logger } from "@zilla/logger";
+import { ConfigManager } from "@src/utils/config/config-manager.ts";
 const logger = new Logger("cron");
 export enum WorkflowType {
   WeixinArticle = "weixin-article-workflow",
-  WeixinAIBench = "weixin-aibench-workflow",
-  WeixinHelloGithub = "weixin-hellogithub-workflow",
 }
 
 export function getWorkflow(type: WorkflowType): WorkflowEntrypoint {
@@ -22,33 +19,30 @@ export function getWorkflow(type: WorkflowType): WorkflowEntrypoint {
           name: "weixin-article-workflow",
         },
       });
-    case WorkflowType.WeixinAIBench:
-      return new WeixinAIBenchWorkflow({
-        id: "weixin-aibench-workflow",
-        env: {
-          name: "weixin-aibench-workflow",
-        },
-      });
-    case WorkflowType.WeixinHelloGithub:
-      return new WeixinHelloGithubWorkflow({
-        id: "weixin-hellogithub-workflow",
-        env: {
-          name: "weixin-hellogithub-workflow",
-        },
-      });
     default:
       throw new Error(`未知的工作流类型: ${type}`);
   }
 }
 
-export const startCronJobs = () => {
+export const startCronJobs = async () => {
   const barkNotifier = new BarkNotifier();
   barkNotifier.notify("定时任务启动", "定时任务启动");
   logger.info("初始化定时任务...");
 
-  // 每天凌晨3点执行
+  // 从配置获取 Cron 表达式，默认每天凌晨 3 点
+  let cronExpression = "0 3 * * *";
+  try {
+    const configManager = ConfigManager.getInstance();
+    cronExpression = await configManager.get<string>("CRON_EXPRESSION") ||
+      cronExpression;
+  } catch {
+    // 保持默认
+  }
+
+  logger.info(`使用 Cron 表达式: ${cronExpression}`);
+
   cron.schedule(
-    "0 3 * * *",
+    cronExpression,
     async () => {
       const dayOfWeek = new Date().getDay(); // 0是周日，1-6是周一到周六
       const adjustedDay = dayOfWeek === 0
